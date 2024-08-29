@@ -1,15 +1,24 @@
 use std::fs::File;
-use std::io::{self, BufRead};
+use std::io::{stdin, stdout, Write, self, BufRead};
+use std::collections::HashMap;
 
 fn main() {
-    let file = get_persistent_storage();
-    if let Ok(lines) = buffer_file(file) {
-        for line in lines {
-            match line {
-                Ok(line_content) => println!("{}", line_content),
-                Err(error) => panic!("{}", error),
+    loop {
+        let file = get_persistent_storage();
+        let lines = match buffer_file(file) {
+            Ok(file_contents) => file_contents,
+            Err(error) => panic!("{}", error),
+        };
+
+        let mut line_map: HashMap<u8, String> = HashMap::new();
+        for (index, line) in lines.enumerate() {
+            if let Ok(line_content) = line {
+                line_map.insert(index.try_into().unwrap(), line_content);
             }
         }
+
+        let mut input = String::new();
+        stdin().read_line(&mut input).expect("incorrect input");
     }
 }
 
