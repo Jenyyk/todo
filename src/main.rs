@@ -1,6 +1,6 @@
 use std::process::ExitCode;
 use std::fs::{File, OpenOptions};
-use std::io::{stdin, self, Write, Seek, SeekFrom, BufRead};
+use std::io::{stdin, self, Write, BufRead};
 use std::collections::BTreeMap;
 
 fn main() -> ExitCode {
@@ -19,7 +19,7 @@ fn main() -> ExitCode {
         }
 
         for (num, line) in &line_map {
-            println!("> {num} {line}")
+            println!("{} {} {line}", colored(100, 250, 255, ">"), colored(249, 241, 165, &num.to_string()));
         }
 
         let mut input = String::new();
@@ -31,9 +31,9 @@ fn main() -> ExitCode {
         match iter.next() {
             Some("add") => todo_add(iter.collect::<Vec<&str>>().join(" "), &mut line_map),
             Some("del") => todo_del(iter.map(|s| s.parse::<u16>().unwrap()).collect(), &mut line_map),
-            _ => todo!(),
+            Some("mov") => todo_mov(iter.map(|s| s.parse::<u16>().unwrap()).collect(), &mut line_map),
+            _ => { println!("{}", colored(250, 60, 60, "wrong input")); println!() },
         }
-
     }
 }
 
@@ -52,10 +52,14 @@ fn buffer_file(file_input: &File) -> io::Result<io::Lines<io::BufReader<&File>>>
 
 fn store_user_inputs(input: &mut String) {
     println!();
-    print!("> ");
+    print!("$ ");
     io::stdout().flush().expect("Failed to flush stdout");
     stdin().read_line(input).expect("incorrect input");
     println!();
+}
+
+fn colored(r: u8, g: u8, b: u8, text: &str) -> String {
+    format!("\x1B[38;2;{};{};{}m{}\x1B[0m", r, g, b, text)
 }
 
 fn todo_add(to_add: String, lines: &mut BTreeMap<u16, String>) {
@@ -67,13 +71,12 @@ fn todo_add(to_add: String, lines: &mut BTreeMap<u16, String>) {
     result.push_str(&to_add);
     result.push('\n');
     let mut file = get_persistent_storage("./todo_data.txt");
-    if let Err(error) = file.write_all(result.as_bytes()) {
-        panic!("{}", error);
-    }
+    if let Err(error) = file.write_all(result.as_bytes()) { panic!("{}", error); }
     let _ = file.flush();
 }
 
 fn todo_del(to_del: Vec<u16>, lines: &mut BTreeMap<u16, String>) {
+    use io::{Seek, SeekFrom};
     let mut result = String::new();
     for (num, line) in lines {
         if !to_del.contains(num) {
@@ -82,11 +85,28 @@ fn todo_del(to_del: Vec<u16>, lines: &mut BTreeMap<u16, String>) {
         }
     }
     let mut file = get_persistent_storage("./todo_data.txt");
-    file.seek(SeekFrom::Start(0));
-    if let Err(error) = file.write_all(result.as_bytes()) {
-        panic!("{}", error);
-    }
+    if let Err(error) = file.seek(SeekFrom::Start(0)) { panic!("{}", error); }
+    if let Err(error) = file.write_all(result.as_bytes()) { panic!("{}", error); }
     let _ = file.flush();
     let current_position = file.seek(SeekFrom::Current(0)).expect("failed deleting");
     file.set_len(current_position).expect("failed deleting");
+}
+
+fn todo_mov(to_mov: Vec<u16>, lines: &mut BTreeMap<u16, String>) {
+    swap_values(lines, *to_mov.get(0).unwrap(), *to_mov.get(1).unwrap());
+    let mut result = String::new();
+    for (_num, line) in lines {
+        result.push_str(line);
+        result.push('\n');
+    }
+    let mut file = get_persistent_storage("./todo_data.txt");
+    if let Err(error) = file.write_all(result.as_bytes()) { panic!("{}", error); }
+    let _ = file.flush();
+}
+
+fn swap_values<K: Ord + Copy, V>(map: &mut BTreeMap<K, V>, key1: K, key2: K) {
+    if let (Some(value1), Some(value2)) = (map.remove(&key1), map.remove(&key2)) {
+        map.insert(key1, value2);
+        map.insert(key2, value1);
+    }
 }
