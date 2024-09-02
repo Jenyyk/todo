@@ -2,8 +2,10 @@ use std::process::ExitCode;
 use std::fs::{File, OpenOptions};
 use std::io::{stdin, self, Write, BufRead};
 use std::collections::BTreeMap;
+use colored::*;
 
 fn main() -> ExitCode {
+    colored::control::set_virtual_terminal(true).unwrap();
     loop {
         let file = get_persistent_storage("./todo_data.txt");
         let lines = match buffer_file(&file) {
@@ -59,7 +61,8 @@ fn store_user_inputs(input: &mut String) {
 }
 
 fn colored(r: u8, g: u8, b: u8, text: &str) -> String {
-    format!("\x1B[38;2;{};{};{}m{}\x1B[0m", r, g, b, text)
+    // format!("\x1B[38;2;{};{};{}m{}\x1B[0m", r, g, b, text)
+    text.truecolor(r, g, b).to_string()
 }
 
 fn todo_add(to_add: String, lines: &mut BTreeMap<u16, String>) {
