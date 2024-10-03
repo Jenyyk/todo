@@ -32,7 +32,9 @@ fn main() -> ExitCode {
                 (red, green, blue) = (255, 255, 255);
             } else {
                 let mut split_colors = color.split_whitespace();
-                (red, green, blue) = (split_colors.next().unwrap().parse::<u8>().unwrap(), split_colors.next().unwrap().parse::<u8>().unwrap(), split_colors.next().unwrap().parse::<u8>().unwrap());
+                red = split_colors.next().unwrap_or("").parse::<u8>().unwrap_or(255);
+                green = split_colors.next().unwrap_or("").parse::<u8>().unwrap_or(255);
+                blue = split_colors.next().unwrap_or("").parse::<u8>().unwrap_or(255);
             }
             println!("{} {} {}", colored(100, 250, 255, ">"), colored(249, 241, 165, &num.to_string()), colored(red, green, blue, &line_text));
         }
@@ -46,7 +48,8 @@ fn main() -> ExitCode {
         match iter.next() {
             Some("add") => todo_add(iter.collect::<Vec<&str>>().join(" "), &mut line_map),
             Some("del") => todo_del(iter.map(|s| s.parse::<u16>().unwrap()).collect(), &mut line_map),
-            Some("mov") => todo_mov(iter.map(|s| s.parse::<u16>().unwrap()).collect(), &mut line_map),
+            Some("move") => todo_move(iter.map(|s| s.parse::<u16>().unwrap()).collect(), &mut line_map),
+            Some("color") => todo_color(iter.next().unwrap().parse::<u16>().unwrap(), iter.collect::<Vec<&str>>().join(" "), &mut line_map),
             _ => { println!("{}", colored(250, 60, 60, "wrong input")); println!() },
         }
     }
@@ -108,8 +111,8 @@ fn todo_del(to_del: Vec<u16>, lines: &mut BTreeMap<u16, String>) {
     file.set_len(current_position).expect("failed deleting");
 }
 
-fn todo_mov(to_mov: Vec<u16>, lines: &mut BTreeMap<u16, String>) {
-    swap_values(lines, *to_mov.get(0).unwrap(), *to_mov.get(1).unwrap());
+fn todo_move(to_move: Vec<u16>, lines: &mut BTreeMap<u16, String>) {
+    swap_values(lines, *to_move.get(0).unwrap(), *to_move.get(1).unwrap());
     let mut result = String::new();
     for (_num, line) in lines {
         result.push_str(line);
@@ -119,10 +122,31 @@ fn todo_mov(to_mov: Vec<u16>, lines: &mut BTreeMap<u16, String>) {
     if let Err(error) = file.write_all(result.as_bytes()) { panic!("{}", error); }
     let _ = file.flush();
 }
-
 fn swap_values<K: Ord + Copy, V>(map: &mut BTreeMap<K, V>, key1: K, key2: K) {
     if let (Some(value1), Some(value2)) = (map.remove(&key1), map.remove(&key2)) {
         map.insert(key1, value2);
         map.insert(key2, value1);
     }
+}
+
+fn todo_color(to_color: u16, color: String, lines: &mut BTreeMap<u16, String>) {
+    use io::{Seek, SeekFrom};
+    let mut result = String::new();
+    for (num, line) in lines {
+        if *num == to_color {
+            let mut split_line = line.split("¦¦");
+            result.push_str(split_line.next().unwrap());
+            result.push_str("¦¦");
+            result.push_str(&color);
+        } else {
+            result.push_str(line);
+        }
+        result.push('\n');
+    }
+    let mut file = get_persistent_storage("./todo_data.txt");
+    if let Err(error) = file.seek(SeekFrom::Start(0)) { panic!("{}", error); }
+    if let Err(error) = file.write_all(result.as_bytes()) { panic!("{}", error); }
+    let _ = file.flush();
+    let current_position = file.seek(SeekFrom::Current(0)).expect("failed deleting");
+    file.set_len(current_position).expect("failed deleting");
 }
