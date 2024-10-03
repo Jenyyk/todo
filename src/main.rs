@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use colored::*;
 
 fn main() -> ExitCode {
+    #[cfg(windows)]
     colored::control::set_virtual_terminal(true).unwrap();
     loop {
         let file = get_persistent_storage("./todo_data.txt");
@@ -21,7 +22,19 @@ fn main() -> ExitCode {
         }
 
         for (num, line) in &line_map {
-            println!("{} {} {line}", colored(100, 250, 255, ">"), colored(249, 241, 165, &num.to_string()));
+            let mut split_line = line.split("¦¦");
+            let line_text = split_line.next().unwrap_or("");
+            let color = split_line.next().unwrap_or("");
+            let red: u8;
+            let green: u8;
+            let blue: u8;
+            if color == "" {
+                (red, green, blue) = (255, 255, 255);
+            } else {
+                let mut split_colors = color.split_whitespace();
+                (red, green, blue) = (split_colors.next().unwrap().parse::<u8>().unwrap(), split_colors.next().unwrap().parse::<u8>().unwrap(), split_colors.next().unwrap().parse::<u8>().unwrap());
+            }
+            println!("{} {} {}", colored(100, 250, 255, ">"), colored(249, 241, 165, &num.to_string()), colored(red, green, blue, &line_text));
         }
 
         let mut input = String::new();
