@@ -5,15 +5,19 @@ use std::collections::BTreeMap;
 use colored::*;
 
 fn main() -> ExitCode {
+    // important for coloring in windows
     #[cfg(windows)]
     colored::control::set_virtual_terminal(true).unwrap();
+    // clear_screen(); !IMPORTANT UNCOMMENT BEFORE RELEASE!
     loop {
+        // reads file
         let file = get_persistent_storage("./todo_data.txt");
         let lines = match buffer_file(&file) {
             Ok(file_contents) => file_contents,
             Err(error) => panic!("{}", error),
         };
 
+        // loads file into a Binary Tree Map
         let mut line_map: BTreeMap<u16, String> = BTreeMap::new();
         for (index, line) in lines.enumerate() {
             if let Ok(line_content) = line {
@@ -21,9 +25,12 @@ fn main() -> ExitCode {
             }
         }
 
+        // loops through each line
         for (num, line) in &line_map {
+            // Splits between todo content and color
             let mut split_line = line.split("¦¦");
             let line_text = split_line.next().unwrap_or("");
+            // translates colors, defaults to white
             let color = split_line.next().unwrap_or("");
             let red: u8;
             let green: u8;
@@ -36,21 +43,30 @@ fn main() -> ExitCode {
                 green = split_colors.next().unwrap_or("").parse::<u8>().unwrap_or(255);
                 blue = split_colors.next().unwrap_or("").parse::<u8>().unwrap_or(255);
             }
+            // prints line with color
             println!("{} {} {}", colored(100, 250, 255, ">"), colored(249, 241, 165, &num.to_string()), colored(red, green, blue, &line_text));
         }
 
+        // gets user input
         let mut input = String::new();
         store_user_inputs(&mut input);
         if input.trim() == "exit" {
             return ExitCode::SUCCESS;
         }
+        // clears screen
+        clear_screen();
+        // puts input into iterator by splitting by whitespace
         let mut iter = input.trim().split_whitespace();
+        // Input checking
         match iter.next() {
-            Some("add") => todo_add(iter.collect::<Vec<&str>>().join(" "), &mut line_map),
-            Some("del") => todo_del(iter.map(|s| s.parse::<u16>().unwrap()).collect(), &mut line_map),
-            Some("move") => todo_move(iter.map(|s| s.parse::<u16>().unwrap()).collect(), &mut line_map),
-            Some("color") => todo_color(iter.next().unwrap().parse::<u16>().unwrap(), iter.collect::<Vec<&str>>().join(" "), &mut line_map),
-            _ => { println!("{}", colored(250, 60, 60, "wrong input")); println!() },
+            // first item of iterator dictates command
+            Some("add") => todo_add(iter.collect::<Vec<&str>>().join(" "), &mut line_map), // joins the rest of the iterator into a string and adds it
+            Some("del") => todo_del(iter.map(|s| s.parse::<u16>().unwrap_or(50)).collect(), &mut line_map), // collects the rest of the iterator and deletes it all
+            Some("move") => todo_move(iter.map(|s| s.parse::<u16>().unwrap_or(50)).collect(), &mut line_map), // collects the rest of the iterator and swaps based on first two items in iterator
+            Some("color") => todo_color(iter.next().unwrap().parse::<u16>().unwrap(), iter.collect::<Vec<&str>>().join(" "), &mut line_map), // next item in iterator is which input to color, rest of iterator is the color
+            Some("help") => todo_print_help(), // prints help
+            Some("bea") => { println!("{}", colored(255, 20, 220, "cutýsek")); println!() },
+            _ => { println!("{}", colored(250, 60, 60, "wrong input")); println!() }, // prints red error to signify wrong input
         }
     }
 }
@@ -76,6 +92,12 @@ fn store_user_inputs(input: &mut String) {
     println!();
 }
 
+fn clear_screen() {
+    #[cfg(unix)]
+    std::process::Command::new("clear").status().unwrap();
+    #[cfg(windows)]
+    std::process::Command::new("cls").status().unwrap();
+}
 fn colored(r: u8, g: u8, b: u8, text: &str) -> String {
     // format!("\x1B[38;2;{};{};{}m{}\x1B[0m", r, g, b, text)
     text.truecolor(r, g, b).to_string()
@@ -149,4 +171,14 @@ fn todo_color(to_color: u16, color: String, lines: &mut BTreeMap<u16, String>) {
     let _ = file.flush();
     let current_position = file.seek(SeekFrom::Current(0)).expect("failed deleting");
     file.set_len(current_position).expect("failed deleting");
+}
+
+fn todo_print_help() {
+    println!("- {} prints this menu", colored(160, 160, 160, "help"));
+    println!("- {} adds a task  ", colored(160, 160, 160, "add"));
+    println!("- {} deletes tasks, based on index, can take multiple arguments", colored(160, 160, 160, "del ~..."));
+    println!("- {} swaps two tasks based on index", colored(160, 160, 160, "move ~ ~"));
+    println!("- {} colors a task based on the index and color input", colored(160, 160, 160, "color ~ r g b"));
+    println!();
+    println!();
 }
