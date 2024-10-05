@@ -8,7 +8,6 @@ fn main() -> ExitCode {
     // important for coloring in windows
     #[cfg(windows)]
     colored::control::set_virtual_terminal(true).unwrap();
-    // clear_screen(); !IMPORTANT UNCOMMENT BEFORE RELEASE!
     loop {
         // reads file
         let file = get_persistent_storage("./todo_data.txt");
@@ -61,9 +60,9 @@ fn main() -> ExitCode {
         match iter.next() {
             // first item of iterator dictates command
             Some("add") => todo_add(iter.collect::<Vec<&str>>().join(" "), &mut line_map), // joins the rest of the iterator into a string and adds it
-            Some("del") => todo_del(iter.map(|s| s.parse::<u16>().unwrap_or(50)).collect(), &mut line_map), // collects the rest of the iterator and deletes it all
-            Some("move") => todo_move(iter.map(|s| s.parse::<u16>().unwrap_or(50)).collect(), &mut line_map), // collects the rest of the iterator and swaps based on first two items in iterator
-            Some("color") => todo_color(iter.next().unwrap().parse::<u16>().unwrap(), iter.collect::<Vec<&str>>().join(" "), &mut line_map), // next item in iterator is which input to color, rest of iterator is the color
+            Some("del") => todo_del(iter.map(|s| s.parse::<u16>().unwrap_or(65535)).collect(), &mut line_map), // collects the rest of the iterator and deletes it all
+            Some("move") => todo_move(iter.map(|s| s.parse::<u16>().unwrap_or(65535)).collect(), &mut line_map), // collects the rest of the iterator and swaps based on first two items in iterator
+            Some("color") => todo_color(iter.next().unwrap().parse::<u16>().unwrap_or(65535), iter.collect::<Vec<&str>>().join(" "), &mut line_map), // next item in iterator is which input to color, rest of iterator is the color
             Some("help") => todo_print_help(), // prints help
             Some("bea") => { println!("{}", colored(255, 20, 220, "cutýsek")); println!() },
             _ => { println!("{}", colored(250, 60, 60, "wrong input")); println!() }, // prints red error to signify wrong input
