@@ -93,9 +93,14 @@ fn store_user_inputs(input: &mut String) {
 
 fn clear_screen() {
     #[cfg(unix)]
-    std::process::Command::new("clear").status().unwrap();
+    std::process::Command::new("clear").status().expect("failed clearing terminal screen");
     #[cfg(windows)]
-    std::process::Command::new("cls").status().unwrap();
+    {
+        std::process::Command::new("cmd")
+            .args(&["/C", "cls"])
+            .status()
+            .expect("failed clearing terminal screen");
+    }
 }
 fn colored(r: u8, g: u8, b: u8, text: &str) -> String {
     // format!("\x1B[38;2;{};{};{}m{}\x1B[0m", r, g, b, text)
@@ -125,8 +130,8 @@ fn todo_del(to_del: Vec<u16>, lines: &mut BTreeMap<u16, String>) {
         }
     }
     let mut file = get_persistent_storage("./todo_data.txt");
-    if let Err(error) = file.seek(SeekFrom::Start(0)) { panic!("{}", error); }
-    if let Err(error) = file.write_all(result.as_bytes()) { panic!("{}", error); }
+    file.seek(SeekFrom::Start(0)).expect("failed writing while deleting");
+    file.write_all(result.as_bytes()).expect("failed writing while deleting");
     let _ = file.flush();
     let current_position = file.seek(SeekFrom::Current(0)).expect("failed deleting");
     file.set_len(current_position).expect("failed deleting");
@@ -140,7 +145,7 @@ fn todo_move(to_move: Vec<u16>, lines: &mut BTreeMap<u16, String>) {
         result.push('\n');
     }
     let mut file = get_persistent_storage("./todo_data.txt");
-    if let Err(error) = file.write_all(result.as_bytes()) { panic!("{}", error); }
+    file.write_all(result.as_bytes()).expect("failed writing while swapping values");
     let _ = file.flush();
 }
 fn swap_values<K: Ord + Copy, V>(map: &mut BTreeMap<K, V>, key1: K, key2: K) {
@@ -156,7 +161,7 @@ fn todo_color(to_color: u16, color: String, lines: &mut BTreeMap<u16, String>) {
     for (num, line) in lines {
         if *num == to_color {
             let mut split_line = line.split("¦¦");
-            result.push_str(split_line.next().unwrap());
+            result.push_str(split_line.next().expect("failed to split color data"));
             result.push_str("¦¦");
             result.push_str(&color);
         } else {
@@ -165,8 +170,8 @@ fn todo_color(to_color: u16, color: String, lines: &mut BTreeMap<u16, String>) {
         result.push('\n');
     }
     let mut file = get_persistent_storage("./todo_data.txt");
-    if let Err(error) = file.seek(SeekFrom::Start(0)) { panic!("{}", error); }
-    if let Err(error) = file.write_all(result.as_bytes()) { panic!("{}", error); }
+    file.seek(SeekFrom::Start(0)).expect("failed writing while deleting");
+    file.write_all(result.as_bytes()).expect("failed writing while deleting");
     let _ = file.flush();
     let current_position = file.seek(SeekFrom::Current(0)).expect("failed deleting");
     file.set_len(current_position).expect("failed deleting");
